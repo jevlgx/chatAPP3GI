@@ -20,9 +20,9 @@ export default function ChatInput({ handleSendMsg, handleSendBotMessage, botRes 
   const sendChat = (event) => {
     event.preventDefault();
     if (msg.length > 0) {
+      handleSendMsg(msg);
+      setMsg("");
       if (botRes) {
-        handleSendMsg(msg);
-        setMsg("");
       }
       else{
 

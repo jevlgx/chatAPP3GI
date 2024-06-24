@@ -26,6 +26,38 @@ export default function ChatContainer({currentChat, socket}) {
       setNumeroMessageBot(newNumero)
       return newNumero
     }
+
+    const generateAnswer = async (msg) => {
+      console.log("11111111111111")
+      let newMessageAEnvoyer = msg //+ " sachant que ce qui précède sont des symptomes relevés, sur un patient propose un diagnostique sous forme de liste de diagnostiques possibles ne me pas d'astérisques * dans tes reponses NB à la fin de ton message propose que faire pour eviter ces maladies en une seule phrase"
+      try {
+        const apiKey = "AIzaSyBmvr56b2-sfsHHVS0yK68PhgyzF5lUtbQ";
+        const response = await axios({
+          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+          method: "post",
+          data: {
+            contents: [{ parts: [{ text: newMessageAEnvoyer }] }],
+          },
+        });
+        console.log("0000000000",response.data)
+        const answer = response.data.candidates[0].content.parts[0].text;
+        console.log("000000000000", answer)
+        const userMessage = {
+            sender: "currentUser",
+            text: newMessageAEnvoyer        
+          };
+        const IaMessage = {
+          sender: "iagemini",
+          text: answer        
+        };
+        setMessagesBot([...messagesBot, userMessage, IaMessage]);
+        setNewMessageBot('');
+      } catch (error) {
+        console.log(error);
+        // Handle error
+      }
+    }; 
+
     // État pour stocker le nouveau message en cours de saisie
     const [newMessageBot, setNewMessageBot] = useState('');
 
@@ -107,7 +139,9 @@ export default function ChatContainer({currentChat, socket}) {
         );
 
         // Mettre ici la fonction pour générer le message du bot à partir de la liste des messages
-        let botMessage = transformArrayToMessage(chatBotList);
+        //transformArrayToMessage n'existe pas 
+        //let botMessage = transformArrayToMessage(chatBotList);
+        let botMessage = "message..."
 
         let botResponse = await generateAnswer(botMessage);
 
@@ -172,35 +206,7 @@ export default function ChatContainer({currentChat, socket}) {
      * @param question question posée par l'utilisateur
      * @return {Promise<*>} réponse de Gemini
      */
-    const generateAnswer = async (msg) => {
-      let newMessageAEnvoyer = msg //+ " sachant que ce qui précède sont des symptomes relevés, sur un patient propose un diagnostique sous forme de liste de diagnostiques possibles ne me pas d'astérisques * dans tes reponses NB à la fin de ton message propose que faire pour eviter ces maladies en une seule phrase"
-      try {
-        const apiKey = "AIzaSyBmvr56b2-sfsHHVS0yK68PhgyzF5lUtbQ";
-        const response = await axios({
-          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
-          method: "post",
-          data: {
-            contents: [{ parts: [{ text: newMessageAEnvoyer }] }],
-          },
-        });
-        console.log("0000000000",response.data)
-        const answer = response.data.candidates[0].content.parts[0].text;
-
-        const userMessage = {
-            sender: "currentUser",
-            text: newMessageAEnvoyer        
-          };
-        const IaMessage = {
-          sender: "iagemini",
-          text: answer        
-        };
-        setMessagesBot([...messagesBot, userMessage, IaMessage]);
-        setNewMessageBot('');
-      } catch (error) {
-        console.log(error);
-        // Handle error
-      }
-    };  
+    
 
  return (
     <>
