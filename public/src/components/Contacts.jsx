@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Logo from "../assets/chatbot.jpg";
+import imageBot from "../imagesSuplementaires/imageBot.jpg"
 
 export default function Contacts({ contacts, changeChat }) {
   const [currentUserName, setCurrentUserName] = useState(undefined);
@@ -14,28 +15,40 @@ export default function Contacts({ contacts, changeChat }) {
     setCurrentUserImage(data.avatarImage);
   }, []);
   const changeCurrentChat = (index, contact) => {
-    setCurrentSelected(index);
-    changeChat(contact);
+    if(index === "iagemini"){
+      setCurrentSelected("iagemini");
+      changeChat("iagemini");
+    }else{
+      setCurrentSelected(index);
+      changeChat(contact);
+    }
   };
   return (
     <>
       {currentUserImage && currentUserImage && (
           <Container>
-            <a href={"http://localhost:5174/"} style={{
-              textDecoration: 'none'
-            }}>
-              <div className="brand" style={{cursor: 'pointer', marginBottom:'20px'}}>
-                <img src={Logo} alt="logo" style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }}/>
-                <h3>ChatBot</h3>
-              </div>
-            </a>
-
+            <div></div>
             <div className="contacts">
+              <div
+                  key={1}
+                  className={`contact ${
+                      "iagemini" === currentSelected ? "selected" : ""
+                  }`}
+                  onClick={() => changeCurrentChat("iagemini", "")}
+              >
+                <div className="avatar">
+                  <img
+                      src={imageBot}
+                      width="48px"
+                      height="48px"
+                      style={{ borderRadius: '50%' }}
+                      alt="imageBot"
+                  />
+                </div>
+                <div className="username">
+                  <h3>Assistant Virtuel</h3>
+                </div>
+              </div> 
               {contacts.map((contact, index) => {
                 return (
                     <div

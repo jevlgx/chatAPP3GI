@@ -6,11 +6,14 @@ import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
 import {Link} from "react-router-dom";
+import imageBot from "../imagesSuplementaires/imageBot.jpg"
 
-export default function ChatContainer({ currentChat, socket }) {
+
+export default function ChatContainer({ currentChat, socket}) {
   const [messages, setMessages] = useState([]);
   const scrollRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
+
 
   useEffect(async () => {
     const data = await JSON.parse(
@@ -70,43 +73,133 @@ export default function ChatContainer({ currentChat, socket }) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  return (
-    <Container>
-      <div className="chat-header">
-        <div className="user-details">
-          <div className="avatar">
-            <img
-                src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
-                alt=""
-            />
 
-          </div>
-          <div className="username">
-            <h3>{currentChat.username}</h3>
-          </div>
-        </div>
-        <Logout/>
-      </div>
-      <div className="chat-messages">
-        {messages.map((message) => {
-          return (
-            <div ref={scrollRef} key={uuidv4()}>
-              <div
-                className={`message ${
-                  message.fromSelf ? "sended" : "recieved"
-                }`}
-              >
-                <div className="content ">
-                  <p>{message.message}</p>
-                </div>
+  // État pour stocker les messages précédents
+  const [messagesBot, setMessagesBot] = useState([
+    { sender: "iagemini", text: 'Bonjour, je suis votre assistant à la decision médicale: entrez les symptomes du patient ...' }
+  ]);
+  const [numeroMessageBot, setNumeroMessageBot] = useState(1)
+  const modNumeroMessageBot = () =>{
+    let newNumero = numeroMessageBot + 1
+    setNumeroMessageBot(newNumero)
+    return newNumero
+  }
+  // État pour stocker le nouveau message en cours de saisie
+  const [newMessageBot, setNewMessageBot] = useState('');
+
+  const envoieMessageAuBot = ()=>{
+
+  }
+  const generateAnswer = async (msg) => {
+    let newMessageAEnvoyer = msg //+ " sachant que ce qui précède sont des symptomes relevés, sur un patient propose un diagnostique sous forme de liste de diagnostiques possibles ne me pas d'astérisques * dans tes reponses NB à la fin de ton message propose que faire pour eviter ces maladies en une seule phrase"
+    try {
+      const apiKey = "AIzaSyBmvr56b2-sfsHHVS0yK68PhgyzF5lUtbQ";
+      const response = await axios({
+        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        method: "post",
+        data: {
+          contents: [{ parts: [{ text: newMessageAEnvoyer }] }],
+        },
+      });
+      console.log("0000000000",response.data)
+      const answer = response.data.candidates[0].content.parts[0].text;
+
+      const userMessage = {
+          sender: "currentUser",
+          text: newMessageAEnvoyer        
+        };
+      const IaMessage = {
+        sender: "iagemini",
+        text: answer        
+      };
+      setMessagesBot([...messagesBot, userMessage, IaMessage]);
+      setNewMessageBot('');
+    } catch (error) {
+      console.log(error);
+      // Handle error
+    }
+  };
+
+
+ return (
+    <>
+      {currentChat == "iagemini" ? (
+        <Container>
+          <div className="chat-header">
+            <div className="user-details">
+              <div className="avatar">
+                <img
+                    src={imageBot}
+                    width="48px"
+                    height="48px"
+                    style={{ borderRadius: '50%' }}
+                    alt=""
+                />
+              </div>
+              <div className="username">
+                <h3>Assistant virtuel</h3>
               </div>
             </div>
-          );
-        })}
-      </div>
-      <ChatInput handleSendMsg={handleSendMsg} />
-    </Container>
-  );
+            <Logout/>
+          </div>
+          {/* <div className="chat-messages">
+            
+          </div> */}
+          <div className="chat-messages-bot">
+            {messagesBot.map((message) =>{
+              return (
+                <div key={()=>modNumeroMessageBot()} className={message.sender === 'iagemini' ? 'message recieved' : 'message sended'}>
+                  <div className="content ">
+                    <p>{message.sender === 'iagemini' ? 'Assistant' : 'Moi'}</p>
+                    <p>{message.text}</p>
+                  </div>
+                </div>
+              )
+            }
+            )}
+          </div>
+           <ChatInput handleSendMsg={generateAnswer} />
+        </Container>
+      ) : (
+        <Container>
+          <div className="chat-header">
+            <div className="user-details">
+              <div className="avatar">
+                <img
+                    src={`data:image/svg+xml;base64,${currentChat.avatarImage}`}
+                    alt=""
+                />
+
+              </div>
+              <div className="username">
+                <h3>{currentChat.username}</h3>
+              </div>
+            </div>
+            <Logout/>
+          </div>
+          <div className="chat-messages">
+            {messages.map((message) => {
+              return (
+                <div ref={scrollRef} key={uuidv4()}>
+                  <div
+                    className={`message ${
+                      message.fromSelf ? "sended" : "recieved"
+                    }`}
+                  >
+                    <div className="content ">
+                      <p>{message.message}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <ChatInput handleSendMsg={handleSendMsg} />
+        </Container>
+      )
+      }
+    </>
+)
 }
 
 const Container = styled.div`
@@ -139,6 +232,48 @@ const Container = styled.div`
     }
   }
   .chat-messages {
+    padding: 1rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: auto;
+    &::-webkit-scrollbar {
+      width: 0.2rem;
+      &-thumb {
+        background-color: #ffffff39;
+        width: 0.1rem;
+        border-radius: 1rem;
+      }
+    }
+    .message {
+      display: flex;
+      align-items: center;
+      .content {
+        max-width: 40%;
+        overflow-wrap: break-word;
+        padding: 1rem;
+        font-size: 1.1rem;
+        border-radius: 1rem;
+        color: #d1d1d1;
+        @media screen and (min-width: 720px) and (max-width: 1080px) {
+          max-width: 70%;
+        }
+      }
+    }
+    .sended {
+      justify-content: flex-end;
+      .content {
+        background-color: #4f04ff21;
+      }
+    }
+    .recieved {
+      justify-content: flex-start;
+      .content {
+        background-color: #9900ff20;
+      }
+    }
+  }
+  .chat-messages-bot {
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
