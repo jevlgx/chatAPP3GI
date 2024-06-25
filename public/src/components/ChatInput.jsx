@@ -48,7 +48,17 @@ export default function ChatInput({ handleSendMsg, handleSendBotMessage, botRes 
         <button type="submit">
           <IoMdSend />
         </button>
+        
       </form>
+        {/* <button type="submit">
+          on
+        </button>
+        <button type="submit">
+          listen
+        </button>
+        <button type="submit">
+          chat
+        </button> */}
     </Container>
   );
 }
@@ -112,7 +122,7 @@ const Container = styled.div`
     background-color: #ffffff34;
     input {
       width: 90%;
-      height: 60%;
+      height: 50%;
       background-color: transparent;
       color: white;
       border: none;
@@ -146,4 +156,23 @@ const Container = styled.div`
       }
     }
   }
+    button {
+      padding: 0.3rem 2rem;
+      border-radius: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #9a86f3;
+      border: none;
+      @media screen and (min-width: 720px) and (max-width: 1080px) {
+        padding: 0.3rem 1rem;
+        svg {
+          font-size: 1rem;
+        }
+      }
+      svg {
+        font-size: 2rem;
+        color: white;
+      }
+    }
 `;

@@ -17,6 +17,39 @@ export default function ChatContainer({currentChat, socket}) {
     const [listen, setListen] = useState(false);
     const [botRes, setBotRes] = useState(false);
     // État pour stocker les messages précédents
+    const [listenedMessages, setListenedMessages] = useState("")
+    const [toggleState, setToggleState] = useState('off');
+    const handleToggle = (newState) => {
+      switch (toggleState) {
+        case "off":
+          //en mettant à listen, on reinitialise la liste des messages suivis
+          if(newState === "listen"){
+            setListenedMessages("")
+            setToggleState(newState)
+          }
+          // cliquer à nouveau sur off ne change rien
+          // Impossible de passer en mode chat
+          break;
+        case "listen":
+          switch (newState) {
+            case "off":
+              setListenedMessages("")
+              setToggleState(newState)
+              break;
+            case "chat":
+              setToggleState(newState)
+              break;
+          }
+          // cliquer à nouveau sur listen ne change rien
+          break;
+        case "chat":
+          if(newState !== "chat"){
+            setListenedMessages("")
+            setToggleState(newState)
+          }
+          break;
+      }      
+    }
     const [messagesBot, setMessagesBot] = useState([
       { sender: "iagemini", text: 'Bonjour, je suis votre assistant à la decision médicale: entrez les symptomes du patient ...' }
     ]);
@@ -27,11 +60,14 @@ export default function ChatContainer({currentChat, socket}) {
       return newNumero
     }
 
-    const generateAnswer = async (msg) => {
-      console.log("11111111111111")
-      let newMessageAEnvoyer = msg //+ " sachant que ce qui précède sont des symptomes relevés, sur un patient propose un diagnostique sous forme de liste de diagnostiques possibles ne me pas d'astérisques * dans tes reponses NB à la fin de ton message propose que faire pour eviter ces maladies en une seule phrase"
+    const generateAnswer = async (msg, isAutoResponder) => {
+      let answer
+      let newMessageAEnvoyer
+      if(isAutoResponder){
+        newMessageAEnvoyer = "j'ai lié ton api à une application de reservation, et tu dois repondre aux utilisateur à ma place. voici ma conversation précedente avec un utilisateur. poursuit la en renvoyant dans ta réponse le contenu du prochain message possible de 'moi:'"+ msg
+      }else newMessageAEnvoyer = msg
       try {
-        const apiKey = "AIzaSyBmvr56b2-sfsHHVS0yK68PhgyzF5lUtbQ";
+        const apiKey = "AIzaSyBKIuA7emd_YSJPNtXxLr-rCYJFxKWN_Wo";
         const response = await axios({
           url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
           method: "post",
@@ -39,22 +75,35 @@ export default function ChatContainer({currentChat, socket}) {
             contents: [{ parts: [{ text: newMessageAEnvoyer }] }],
           },
         });
-        console.log("0000000000",response.data)
-        const answer = response.data.candidates[0].content.parts[0].text;
-        console.log("000000000000", answer)
+        answer = response.data.candidates[0].content.parts[0].text;
+      } catch (error) {
+        console.error(error);
+      }
+      if(isAutoResponder){
+        //l'IA est chargée de repondre automatiquement aux messages
+        //TODO: envoyer la reponse generee par ia
+        setListenedMessages(msg)
+        console.log("000message analysé", msg)
+        let newString = answer;
+        if (newString.includes("moi :")) {
+          newString = newString.replace("moi :", "");
+        }
+        if (newString.includes("moi:")) {
+          newString = newString.replace("moi:", "");
+        }
+        handleSendMsg(newString)
+      }else{
+        //c'est un chat direct avec l'IA
         const userMessage = {
-            sender: "currentUser",
-            text: newMessageAEnvoyer        
-          };
+          sender: "currentUser",
+          text: msg        
+        };
         const IaMessage = {
           sender: "iagemini",
           text: answer        
         };
         setMessagesBot([...messagesBot, userMessage, IaMessage]);
         setNewMessageBot('');
-      } catch (error) {
-        console.log(error);
-        // Handle error
       }
     }; 
 
@@ -94,6 +143,22 @@ export default function ChatContainer({currentChat, socket}) {
     useEffect(async () => {
         if (arrivalMessage != null) {
             setMessages((prev) => [...prev, arrivalMessage]);
+            console.log('message ARRIVE : ', arrivalMessage)
+            switch (toggleState) {
+              case "listen":
+                setListenedMessages(listenedMessages + `;lui:${arrivalMessage.message}`)
+                break
+              case "chat":
+                //conversation en mode chat
+                //envoyer le message qui arrive à gemini pour traitement
+                let allListenedMessages = listenedMessages + `;lui:${arrivalMessage.message}`
+                //setListenedMessages(allListenedMessages)
+                //Attendre 2s entre toutes les reponses de l'iA
+                setTimeout(() => {
+                  generateAnswer(allListenedMessages, true)
+                }, 2000);
+                break
+            }
             if (listen) {
                 handleAddMessageToListenList(arrivalMessage, false);
                 if(botRes) {
@@ -108,24 +173,33 @@ export default function ChatContainer({currentChat, socket}) {
     }, [messages]);
 
     const handleSendMsg = async (msg) => {
-        const data = await JSON.parse(
-            localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-        );
-        socket.current.emit("send-msg", {
-            to: currentChat._id,
-            from: data._id,
-            msg,
-        });
-        await axios.post(sendMessageRoute, {
-            from: data._id,
-            to: currentChat._id,
-            message: msg,
+      switch (toggleState) {
+        case "listen":
+          setListenedMessages(listenedMessages + `;moi:${msg}`)
+          break
+        case "chat":
+          setListenedMessages(listenedMessages + `;moi:${msg}`)
+          break
+      }
+      const data = await JSON.parse(
+          localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
+      );
+      socket.current.emit("send-msg", {
+          to: currentChat._id,
+          from: data._id,
+          msg,
+      });
+      await axios.post(sendMessageRoute, {
+          from: data._id,
+          to: currentChat._id,
+          message: msg,
 
-        });
+      });
 
-        const msgs = [...messages];
-        msgs.push({fromSelf: true, message: msg});
-        setMessages(msgs);
+      const msgs = [...messages];
+      //TODO: identifier les messages repondus par l'ia
+      msgs.push({fromSelf: true, message: msg});
+      setMessages(msgs);
     };
 
 
@@ -209,7 +283,7 @@ export default function ChatContainer({currentChat, socket}) {
     
 
  return (
-    <>
+    <>  
       {currentChat == "iagemini" ? (
         <Container>
           <div className="chat-header">
@@ -225,10 +299,11 @@ export default function ChatContainer({currentChat, socket}) {
               </div>
               <div className="username">
                 <h3>Assistant virtuel</h3>
-              </div>
+*              </div>
             </div>
             <Logout/>
           </div>
+        
           {/* <div className="chat-messages">
             
           </div> */}
@@ -262,7 +337,44 @@ export default function ChatContainer({currentChat, socket}) {
                 <h3>{currentChat.username}</h3>
               </div>
             </div>
-            <Logout/>
+            <div className="IaTogleState">
+              <div>
+                <button
+                  onClick={() => handleToggle('off')}
+                  style={{
+                    backgroundColor: toggleState === 'off' ? 'gray' : 'transparent',
+                    color: toggleState === 'off' ? 'white' : 'gray',
+                    border: '1px solid gray',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Off
+                </button>
+                <button
+                  onClick={() => handleToggle('listen')}
+                  style={{
+                    backgroundColor: toggleState === 'listen' ? 'green' : 'transparent',
+                    color: toggleState === 'listen' ? 'white' : 'green',
+                    border: '1px solid green',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Listen
+                </button>
+                <button
+                  onClick={() => handleToggle('chat')}
+                  style={{
+                    backgroundColor: toggleState === 'chat' ? 'blue' : 'transparent',
+                    color: toggleState === 'chat' ? 'white' : 'blue',
+                    border: '1px solid blue',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Chat
+                </button>
+              </div>
+              <Logout/>
+            </div>
           </div>
           <div className="chat-messages">
             {messages.map((message) => {
@@ -281,7 +393,7 @@ export default function ChatContainer({currentChat, socket}) {
               );
             })}
           </div>
-          <ChatInput handleSendMsg={handleSendMsg} />
+          {toggleState!== "chat" && <ChatInput handleSendMsg={handleSendMsg} />}
         </Container>
       )
       }
