@@ -67,7 +67,7 @@ export default function ChatContainer({currentChat, socket}) {
         newMessageAEnvoyer = "j'ai lié ton api à une application de reservation, et tu dois repondre aux utilisateur à ma place. voici ma conversation précedente avec un utilisateur. poursuit la en renvoyant dans ta réponse le contenu du prochain message possible de 'moi:'"+ msg
       }else newMessageAEnvoyer = msg
       try {
-        const apiKey = "AIzaSyBKIuA7emd_YSJPNtXxLr-rCYJFxKWN_Wo";
+        const apiKey = process.env.REACT_APP_API_KEY;
         const response = await axios({
           url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
           method: "post",
